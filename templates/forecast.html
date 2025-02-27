@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forecasted Demand ({{ window_size}}-Day Moving Average)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.3.3/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        canvas {
+            margin-top: 20px;
+            max-width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4 text-center">
+        <h1>📈 Demand Forecast</h1>
+        <form action="/forecast" method="GET" class="d-inline-block">
+            <label for="window_size" class="form-label">Select Forecast Period:</label>
+            <select name="window_size" id="window_size" class="form-select w-auto d-inline-block">
+                <option value="3" {% if window_size == 3 %}selected{% endif %}>3-day</option>
+                <option value="7" {% if window_size == 7 %}selected{% endif %}>7-day</option>
+                <option value="14" {% if window_size == 14 %}selected{% endif %}>14-day</option>
+            </select>
+            <button type="submit" class="btn btn-primary">Update Forecast</button>
+        </form>
+    </div>
+
+    {% if message %}
+        <p>{{ message }}</p>
+    {% endif %}
+
+    {% if forecast_data %}
+        <div class="container mt-4">
+            <h2 class="text-center">📊 Forecasted Sales Data </h2>
+
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                <table class="table table-bordered table-striped">
+                    <tread class="table-dark">
+                        <tr>
+                            <th>Date</th>
+                            <th>Forecasted Quantity</th>
+                        </tr>
+                    </tread>
+                    <tbody>
+                        {% for row in forecast_data %}
+                            <tr>
+                                <td>{{ row["date"] }}</td>
+                                <td>{{ "%.2f"|format(row["forecast"]) }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+
+        <h2>Sales Trend Graph</h2>
+        <canvas id="salesChart"></canvas>
+
+    <script>
+    var forecastData = {{ forecast_data | tojson | safe }};
+    var labels = [];
+    var actualSales = [];
+    var forecastSales = [];
+
+    // Ensure data is properly formatted
+    forecastData.forEach(entry => {
+        labels.push(entry.date);
+        actualSales.push(entry.total_quantity);
+        forecastSales.push(entry.forecast);
+    });
+
+    var ctx = document.getElementById('salesChart').getContext('2d');
+    var salesChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Actual Sales',
+                    data: actualSales,
+                    borderColor: 'blue',
+                    borderWidth: 2,
+                    fill: false,
+                    pointRadius: 3
+                },
+                {
+                    label: 'Forecasted Sales',
+                    data: forecastSales,
+                    borderColor: 'red',
+                    borderWidth: 2,
+                    fill: false,
+                    pointRadius: 3,
+                    borderDash: [5, 5] // Dashed line for forecast
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    title: { display: true, text: 'Date' }
+                },
+                y: {
+                    title: { display: true, text: 'Quantity Sold' },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+            
+    </script>
+    {% endif %}
+
+    <div class="container text-center mt-3">
+        <h4>📤 Export Forecasted Data</h4>
+        <a href="/export/forecast/excel" class="btn btn-success">Download Excel</a>
+        <a href="/export/forecast/pdf" class="btn btn-danger">Download PDF</a>
+    </div>
+    
+    <br>
+    <a href="/">Back to Home</a>
+</body>
+</html>
