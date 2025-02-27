@@ -146,7 +146,19 @@ def login():
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM users WHERE username=?", (username,))
         user = cursor.fetchone()
+
+        if user and check_password_hash(user["password"], password):
+            login_user(User(id=user["id"], username=user["username"], password=user["password"]))
+
+            # Clear the logged-in user's previous data
+            cursor.execute("DELETE FROM sales WHERE user_id=?", (int(current_user.id),))
+            conn.commit()
+            conn.close()
+
+            flash("Login successful!", "success")
+            return redirect(url_for("home"))
         conn.close()
+        flash("Invalid credentials. Try again.", "danger")
 
         if user and check_password_hash(user["password"], password):
             login_user(User(id=user["id"], username=user["username"], password=user["password"]))
@@ -426,4 +438,4 @@ def export_forecast_pdf():
 
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5001)
